@@ -190,7 +190,13 @@ export class LevelUpOverlay {
     return false;
   }
 
-  showGameOver(opts: { time: number; level: number; kills: number; onRestart: () => void }): void {
+  showGameOver(opts: {
+    time: number;
+    bestTime?: number;
+    level: number;
+    kills: number;
+    onRestart: () => void;
+  }): void {
     this.container.visible = true;
     this.gameOverMode = true;
     this.onRestart = opts.onRestart;
@@ -199,10 +205,18 @@ export class LevelUpOverlay {
     const ss = Math.floor(opts.time % 60);
     const time = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 
+    let best = '';
+    if (typeof opts.bestTime === 'number') {
+      const bm = Math.floor(opts.bestTime / 60);
+      const bs = Math.floor(opts.bestTime % 60);
+      best = `${String(bm).padStart(2, '0')}:${String(bs).padStart(2, '0')}`;
+    }
+
     this.title.text = '倒下了… 点击任意卡牌或按 Enter 重开';
 
     const lines = [
       `生存时间：${time}`,
+      ...(best ? [`最佳生存：${best}`] : []),
       `等级：${opts.level}`,
       `击杀：${opts.kills}`,
     ].join('\n');

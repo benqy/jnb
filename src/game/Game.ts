@@ -14,11 +14,12 @@ import { Monster } from './world/Monster';
 import { Projectile } from './world/Projectile';
 import { Pickup } from './world/Pickup';
 import { ParticleSystem } from './world/ParticleSystem';
-import { HitFlashFilter } from './render/HitFlashFilter';
 import { LevelUpOverlay } from './ui/LevelUpOverlay';
 import { HUD } from './ui/HUD';
 import { HintToast } from './ui/HintToast';
 import { CornerHelp } from './ui/CornerHelp';
+import { TitleOverlay } from './ui/TitleOverlay';
+import { PauseOverlay } from './ui/PauseOverlay';
 import { applyUpgradeChoice, getUpgradePool, type UpgradeChoice } from './upgrades/Upgrades';
 
 export class Game {
@@ -60,7 +61,11 @@ export class Game {
 
   private pausedForLevelUp = false;
 
-  private readonly hitFlashFilter = new HitFlashFilter();
+  private started = false;
+  private paused = false;
+
+  private readonly titleOverlay: TitleOverlay;
+  private readonly pauseOverlay: PauseOverlay;
 
   constructor(app: Application) {
     this.app = app;
@@ -72,6 +77,9 @@ export class Game {
     });
     this.hintToast = new HintToast();
     this.cornerHelp = new CornerHelp('WASD 移动\n升级：1/2/3\n融合：两技能≥Lv3');
+
+    this.titleOverlay = new TitleOverlay();
+    this.pauseOverlay = new PauseOverlay();
   }
 
   async init(): Promise<void> {
@@ -89,6 +97,8 @@ export class Game {
     this.ui.addChild(this.levelUpOverlay.container);
     this.ui.addChild(this.hintToast.container);
     this.ui.addChild(this.cornerHelp.container);
+    this.ui.addChild(this.titleOverlay.container);
+    this.ui.addChild(this.pauseOverlay.container);
 
     await this.loadAssets();
     this.buildBackground();
@@ -98,7 +108,6 @@ export class Game {
       shadowTexture: this.shadowTex,
       pos: new Vec2(0, 0),
     });
-    this.player.sprite.filters = [this.hitFlashFilter];
 
     this.worldEntities.addChild(this.player.display);
 
@@ -107,7 +116,7 @@ export class Game {
     // Starter weapon
     this.player.addWeapon('arcaneBolt');
 
-    this.hintToast.show('WASD 移动 | 升级时 1/2/3 选择');
+    this.hintToast.show('WASD 移动 | 升级时 1/2/3 选择 | Esc 暂停');
 
     this.levelUpOverlay.hide();
 
@@ -117,20 +126,66 @@ export class Game {
       this.hud.layout(this.app.screen.width, this.app.screen.height);
       this.hintToast.layout(this.app.screen.width, this.app.screen.height);
       this.cornerHelp.layout(this.app.screen.width, this.app.screen.height);
+      this.titleOverlay.layout(this.app.screen.width, this.app.screen.height);
+      this.pauseOverlay.layout(this.app.screen.width, this.app.screen.height);
     });
 
     this.levelUpOverlay.layout(this.app.screen.width, this.app.screen.height);
     this.hud.layout(this.app.screen.width, this.app.screen.height);
     this.hintToast.layout(this.app.screen.width, this.app.screen.height);
     this.cornerHelp.layout(this.app.screen.width, this.app.screen.height);
+
+    this.titleOverlay.layout(this.app.screen.width, this.app.screen.height);
+    this.pauseOverlay.layout(this.app.screen.width, this.app.screen.height);
+
+    this.titleOverlay.show({ bestTime: this.getBestTime() });
+    this.pauseOverlay.hide();
   }
 
   update(dt: number): void {
     dt = clamp(dt, 0, 0.05);
 
-    this.elapsed += dt;
+    // Global hotkeys
+    if (this.started && !this.pausedForLevelUp && this.input.wasPressed('Escape')) {
+      this.paused = !this.paused;
+      if (this.paused) {
+        this.pauseOverlay.show();
+        this.hintToast.show('已暂停：Esc 继续 | R 重开');
+      } else {
+        this.pauseOverlay.hide();
+        this.hintToast.show('继续');
+      }
+    }
 
-    this.hitFlashFilter.time = this.elapsed;
+    // Title screen
+    if (!this.started) {
+      if (this.input.wasPressed('Space') || this.input.wasPressed('Enter')) {
+        this.started = true;
+        this.titleOverlay.hide();
+        this.hintToast.show('开始！WASD 移动 | 升级时 1/2/3');
+      }
+
+      this.hintToast.update(dt);
+      this.particles.update(dt);
+      this.updateCamera();
+      this.hud.update(this.player, this.elapsed);
+      this.input.endFrame();
+      return;
+    }
+
+    // Manual pause
+    if (this.paused) {
+      if (this.input.wasPressed('KeyR')) window.location.reload();
+      this.hintToast.update(dt);
+      this.particles.update(dt);
+      this.updateCamera();
+      this.hud.update(this.player, this.elapsed);
+      this.input.endFrame();
+      return;
+    }
+
+    // Only advance game-time when simulation is running
+    this.elapsed += dt;
 
     if (this.pausedForLevelUp) {
       const picked = this.levelUpOverlay.handleHotkeys(this.input);
@@ -260,7 +315,9 @@ export class Game {
 
   private spawnMonster(): void {
     const tex = sample(this.monsterTex);
-    const spawnRadius = clamp(520 + this.spawnIntensity * 30, 520, 900);
+    const viewR = Math.max(this.app.screen.width, this.app.screen.height) / 2;
+    const minOffscreen = viewR + 240;
+    const spawnRadius = clamp(Math.max(minOffscreen, 520 + this.spawnIntensity * 30), 520, 1100);
     const angle = Math.random() * Math.PI * 2;
     const pos = new Vec2(
       this.player.pos.x + Math.cos(angle) * spawnRadius + randRange(-80, 80),
@@ -273,7 +330,6 @@ export class Game {
       pos,
       level: this.spawnIntensity,
     });
-    monster.sprite.filters = [this.hitFlashFilter];
 
     this.monsters.push(monster);
     this.worldEntities.addChild(monster.display);
@@ -293,6 +349,13 @@ export class Game {
         const now = this.elapsed;
         if (this.player.canTakeContactHit(now)) {
           this.player.takeDamage(m.contactDamage, now);
+
+          // small separation push so contact hits feel fair
+          const pushDir = d.len() > 0.001 ? d.norm() : new Vec2(1, 0);
+          this.player.pos = this.player.pos.add(pushDir.mul(-28));
+          this.player.display.x = this.player.pos.x;
+          this.player.display.y = this.player.pos.y;
+
           this.particles.damageNumber({
             pos: this.player.pos,
             value: m.contactDamage,
@@ -447,11 +510,38 @@ export class Game {
 
   private beginGameOver(): void {
     this.pausedForLevelUp = true;
+
+     const best = this.setAndGetBestTime(this.elapsed);
     this.levelUpOverlay.showGameOver({
       time: this.elapsed,
+      bestTime: best,
       level: this.player.level,
       kills: this.player.kills,
       onRestart: () => window.location.reload(),
     });
+  }
+
+  private getBestTime(): number | undefined {
+    try {
+      const raw = window.localStorage.getItem('jnb.bestTime');
+      if (!raw) return undefined;
+      const v = Number(raw);
+      return Number.isFinite(v) && v > 0 ? v : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private setAndGetBestTime(time: number): number | undefined {
+    try {
+      const cur = this.getBestTime();
+      if (!cur || time > cur) {
+        window.localStorage.setItem('jnb.bestTime', String(time));
+        return time;
+      }
+      return cur;
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -34,42 +34,20 @@ const fragment = `
   in vec2 vTextureCoord;
 
   uniform sampler2D uTexture;
-  uniform float uTime;
-
-  // Injected by host by setting alpha of sprite to carry "hit" info? (cheap trick)
-  // We'll instead flash based on very small time-variant noise to add life.
 
   void main(void)
   {
-      vec4 col = texture2D(uTexture, vTextureCoord);
-
-      // subtle shimmer so static sprites feel alive
-      float n = sin((vTextureCoord.x + vTextureCoord.y) * 80.0 + uTime * 10.0) * 0.5 + 0.5;
-      col.rgb += n * 0.02;
-
-      gl_FragColor = col;
+      gl_FragColor = texture2D(uTexture, vTextureCoord);
   }
 `;
 
 export class HitFlashFilter extends Filter {
-  time = 0;
-
   constructor() {
     super({
       glProgram: new GlProgram({
         vertex,
         fragment,
       }),
-      resources: {
-        timeUniforms: {
-          uTime: { value: 0.0, type: 'f32' },
-        },
-      },
     });
-  }
-
-  override apply(...args: Parameters<Filter['apply']>): void {
-    this.resources.timeUniforms.uniforms.uTime = this.time;
-    super.apply(...args);
   }
 }

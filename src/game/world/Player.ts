@@ -39,6 +39,8 @@ export class Player {
   private lastContactHitAt = -999;
   private contactIFrames = 0.7;
 
+  private hurtFlash = 0;
+
   weapons: Weapon[] = [];
 
   dead = false;
@@ -65,7 +67,6 @@ export class Player {
     this.display.addChild(this.shadow);
     this.display.addChild(this.sprite);
   }
-
   update(dt: number, axis: { x: number; y: number }): void {
     if (this.dead) return;
 
@@ -91,7 +92,15 @@ export class Player {
     }
 
     // tiny tilt feels like "步伐" 而不是海浪
-    this.sprite.rotation = moving ? axis.x * 0.06 : Math.sin(this.t * 2) * 0.01;
+    this.sprite.rotation = moving ? axis.x * 0.06 : Math.sin(this.t * 2) * 0.015;
+
+    // damage flash (no shader / no wobble)
+    if (this.hurtFlash > 0) {
+      this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+      this.sprite.tint = 0xffb3c1;
+    } else {
+      this.sprite.tint = 0xffffff;
+    }
   }
 
   addWeapon(id: WeaponId): void {
@@ -160,6 +169,8 @@ export class Player {
   takeDamage(amount: number, now: number): void {
     if (this.dead) return;
     this.lastContactHitAt = now;
+
+    this.hurtFlash = 0.12;
 
     this.hp = clamp(this.hp - amount, 0, this.maxHp);
     if (this.hp <= 0) this.dead = true;
