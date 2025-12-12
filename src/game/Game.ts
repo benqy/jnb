@@ -6,6 +6,7 @@ import {
   Texture,
   TilingSprite,
 } from 'pixi.js';
+import { PROJECT_ROOT } from '../config';
 import { Input } from './input/Input';
 import { Vec2 } from './math/Vec2';
 import { clamp, randRange, sample } from './math/util';
@@ -223,13 +224,13 @@ export class Game {
   }
 
   private async loadAssets(): Promise<void> {
-    this.heroTex = await Assets.load('/jnb/images/hero.png');
-    this.shadowTex = await Assets.load('/jnb/images/Char_shadow.png');
-    this.tileTex = await Assets.load('/jnb/images/tile.png');
+    this.heroTex = await Assets.load(`${PROJECT_ROOT}images/hero.png`);
+    this.shadowTex = await Assets.load(`${PROJECT_ROOT}images/Char_shadow.png`);
+    this.tileTex = await Assets.load(`${PROJECT_ROOT}images/tile.png`);
     // allow repeating
     this.tileTex.source.wrapMode = 'repeat';
 
-    const monsterPaths = Array.from({ length: 24 }, (_, i) => `/jnb/images/monster/monster-${i}.png`);
+    const monsterPaths = Array.from({ length: 24 }, (_, i) => `${PROJECT_ROOT}images/monster/monster-${i}.png`);
     const textures = await Promise.all(monsterPaths.map((p) => Assets.load(p)));
     this.monsterTex = textures;
   }
