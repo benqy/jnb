@@ -1,4 +1,4 @@
-name: Build and deploy to gh-pages
+name: Build and deploy to gh-pages (pnpm)
 
 on:
   push:
@@ -21,24 +21,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (no built-in cache)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Install dependencies (ci if lockfile exists, otherwise install)
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Enable corepack and prepare pnpm
         run: |
-          if [ -f package-lock.json ]; then
-            echo "package-lock.json found — using npm ci"
-            npm ci
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm -v
+
+      - name: Install dependencies (frozen if lockfile exists)
+        run: |
+          if [ -f pnpm-lock.yaml ] || [ -f pnpm-lock ]; then
+            echo "pnpm lockfile found — using pnpm install --frozen-lockfile"
+            pnpm install --frozen-lockfile
           else
-            echo "No package-lock.json — using npm install"
-            npm install
+            echo "No pnpm lockfile — using pnpm install"
+            pnpm install
           fi
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Find build output directory
         id: find_build
