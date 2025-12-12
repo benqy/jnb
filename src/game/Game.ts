@@ -4,7 +4,6 @@ import {
   Container,
   Graphics,
   Texture,
-  Text,
 } from 'pixi.js';
 import { Input } from './input/Input';
 import { Vec2 } from './math/Vec2';
@@ -15,9 +14,11 @@ import { Projectile } from './world/Projectile';
 import { Pickup } from './world/Pickup';
 import { ParticleSystem } from './world/ParticleSystem';
 import { HitFlashFilter } from './render/HitFlashFilter';
-import { WeaponId } from './weapons/Weapons';
-import { LevelUpOverlay, type UpgradeChoice } from './ui/LevelUpOverlay';
+import { LevelUpOverlay } from './ui/LevelUpOverlay';
 import { HUD } from './ui/HUD';
+import { HintToast } from './ui/HintToast';
+import { CornerHelp } from './ui/CornerHelp';
+import { applyUpgradeChoice, getUpgradePool, type UpgradeChoice } from './upgrades/Upgrades';
 
 export class Game {
   private readonly app: Application;
@@ -45,6 +46,8 @@ export class Game {
 
   private readonly hud: HUD;
   private readonly levelUpOverlay: LevelUpOverlay;
+  private readonly hintToast: HintToast;
+  private readonly cornerHelp: CornerHelp;
 
   private elapsed = 0;
   private spawnTimer = 0;
@@ -60,8 +63,10 @@ export class Game {
 
     this.hud = new HUD();
     this.levelUpOverlay = new LevelUpOverlay({
-      onPick: (choice: UpgradeChoice) => this.applyUpgrade(choice.weaponId, choice.kind),
+      onPick: (choice: UpgradeChoice) => this.applyUpgrade(choice),
     });
+    this.hintToast = new HintToast();
+    this.cornerHelp = new CornerHelp('WASD 移动\n升级：1/2/3\n融合：两技能≥Lv3');
   }
 
   async init(): Promise<void> {
@@ -77,6 +82,8 @@ export class Game {
 
     this.ui.addChild(this.hud.container);
     this.ui.addChild(this.levelUpOverlay.container);
+    this.ui.addChild(this.hintToast.container);
+    this.ui.addChild(this.cornerHelp.container);
 
     await this.loadAssets();
     this.buildBackground();
@@ -95,15 +102,7 @@ export class Game {
     // Starter weapon
     this.player.addWeapon('arcaneBolt');
 
-    // A tiny hint label (non-interactive)
-    const hint = new Text({
-      text: 'WASD 移动 | 升级时 1/2/3 选择',
-      style: { fill: 0xbfd3ff, fontSize: 14 },
-    });
-    hint.alpha = 0.75;
-    hint.x = 12;
-    hint.y = 12;
-    this.ui.addChild(hint);
+    this.hintToast.show('WASD 移动 | 升级时 1/2/3 选择');
 
     this.levelUpOverlay.hide();
 
@@ -111,10 +110,14 @@ export class Game {
       this.buildBackground();
       this.levelUpOverlay.layout(this.app.screen.width, this.app.screen.height);
       this.hud.layout(this.app.screen.width, this.app.screen.height);
+      this.hintToast.layout(this.app.screen.width, this.app.screen.height);
+      this.cornerHelp.layout(this.app.screen.width, this.app.screen.height);
     });
 
     this.levelUpOverlay.layout(this.app.screen.width, this.app.screen.height);
     this.hud.layout(this.app.screen.width, this.app.screen.height);
+    this.hintToast.layout(this.app.screen.width, this.app.screen.height);
+    this.cornerHelp.layout(this.app.screen.width, this.app.screen.height);
   }
 
   update(dt: number): void {
@@ -141,6 +144,8 @@ export class Game {
     this.updateMonsters(dt);
     this.updateProjectiles(dt);
     this.updatePickups(dt);
+
+    this.hintToast.update(dt);
 
     this.particles.update(dt);
 
@@ -274,14 +279,13 @@ export class Game {
         const now = this.elapsed;
         if (this.player.canTakeContactHit(now)) {
           this.player.takeDamage(m.contactDamage, now);
-          this.particles.burstText({
+          this.particles.damageNumber({
             pos: this.player.pos,
-            text: '✹',
+            value: m.contactDamage,
             color: 0xff5263,
-            count: 14,
-            speed: 260,
-            life: 0.35,
+            size: 22,
           });
+          this.particles.hitSpark({ pos: this.player.pos, color: 0xff5263, strength: 0.8 });
         }
       }
     }
@@ -310,6 +314,7 @@ export class Game {
         const dist = d.len();
         if (dist <= m.radius + p.radius) {
           m.hit(p.damage, p.knockbackDir, p.knockback);
+          this.particles.damageNumber({ pos: m.pos, value: p.damage, color: p.hitColor, size: 18 });
           this.particles.hitSpark({
             pos: p.pos,
             color: p.hitColor,
@@ -398,17 +403,32 @@ export class Game {
   private beginLevelUp(): void {
     this.pausedForLevelUp = true;
 
-    const pool = this.player.getUpgradeableWeaponPool();
+    const pool = getUpgradePool(this.player);
     const choices = this.levelUpOverlay.rollChoices(pool);
     this.levelUpOverlay.show(choices);
   }
 
-  private applyUpgrade(weaponId: WeaponId, kind: 'new' | 'upgrade'): void {
-    if (kind === 'new') {
-      this.player.addWeapon(weaponId);
-    } else {
-      this.player.upgradeWeapon(weaponId);
+  private applyUpgrade(choice: UpgradeChoice): void {
+    if (choice.type === 'fusion') {
+      // big celebratory VFX
+      this.particles.shockwave({ pos: this.player.pos, radius: 440, color: 0xbfe8ff, life: 0.65 });
+      for (let i = 0; i < 3; i++) {
+        const from = this.player.pos.add(new Vec2(randRange(-160, 160), -320 - randRange(0, 120)));
+        this.particles.lightningArc({
+          from,
+          to: this.player.pos,
+          color: 0xbfe8ff,
+          life: 0.22,
+          width: 3.2,
+          segments: 14,
+          chaos: 34,
+          branches: 3,
+        });
+      }
+      this.particles.hitSpark({ pos: this.player.pos, color: 0xbfe8ff, strength: 2.1 });
+      this.hintToast.show(`${choice.title}！`);
     }
+    applyUpgradeChoice(this.player, choice);
   }
 
   private beginGameOver(): void {

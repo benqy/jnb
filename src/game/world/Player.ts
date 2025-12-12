@@ -12,7 +12,7 @@ export class Player {
   vel = Vec2.zero();
 
   readonly radius = 34;
-  readonly pickupRadius = 90;
+  pickupRadius = 90;
 
   maxHp = 100;
   hp = 100;
@@ -25,6 +25,14 @@ export class Player {
   kills = 0;
 
   moveSpeed = 320;
+
+  // global scaling for all spells
+  damageMult = 1;
+  cooldownMult = 1;
+  areaMult = 1;
+
+  // persistent upgrade levels by id
+  statLevels: Record<string, number> = Object.create(null);
 
   private t = 0;
 
@@ -106,6 +114,8 @@ export class Player {
 
     const pool: { id: WeaponId; kind: 'new' | 'upgrade' }[] = [];
 
+    const fusionOnly = new Set<WeaponId>(['stormcaller', 'astralBlades', 'glacialSingularity']);
+
     // upgrades
     for (const w of this.weapons) {
       if (w.level < w.maxLevel) pool.push({ id: w.id, kind: 'upgrade' });
@@ -114,6 +124,7 @@ export class Player {
     // new weapons
     const all = Object.keys(weaponFactories) as WeaponId[];
     for (const id of all) {
+      if (fusionOnly.has(id)) continue;
       if (!owned.has(id)) pool.push({ id, kind: 'new' });
     }
 

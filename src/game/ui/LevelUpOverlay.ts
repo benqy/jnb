@@ -1,12 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { pickN } from '../math/util';
 import { Input } from '../input/Input';
-import { WeaponId, weaponMeta } from '../weapons/Weapons';
-
-export type UpgradeChoice = {
-  weaponId: WeaponId;
-  kind: 'new' | 'upgrade';
-};
+import { UpgradeChoice } from '../upgrades/Upgrades';
 
 export class LevelUpOverlay {
   readonly container = new Container();
@@ -112,10 +107,19 @@ export class LevelUpOverlay {
     }
   }
 
-  rollChoices(pool: { id: WeaponId; kind: 'new' | 'upgrade' }[]): UpgradeChoice[] {
+  rollChoices(pool: UpgradeChoice[]): UpgradeChoice[] {
     this.gameOverMode = false;
 
-    const picked = pickN(pool, 3);
+    const fusions = pool.filter((p) => p.type === 'fusion');
+    const rest = pool.filter((p) => p.type !== 'fusion');
+
+    const picked: UpgradeChoice[] = [];
+
+    if (fusions.length > 0) {
+      picked.push(fusions[(Math.random() * fusions.length) | 0]);
+    }
+
+    picked.push(...pickN(rest, 3 - picked.length));
 
     // If pool is small, fill with replacement (safe fallback)
     while (picked.length < 3 && pool.length > 0) {
@@ -124,10 +128,15 @@ export class LevelUpOverlay {
 
     // As an absolute fallback (shouldn't happen), repeat first entry
     while (picked.length < 3) {
-      picked.push({ id: 'arcaneBolt', kind: 'upgrade' });
+      picked.push({
+        type: 'stat',
+        statId: 'maxHp',
+        title: '强化：生命上限',
+        desc: '最大生命 +18，并立刻回复 18。',
+      });
     }
 
-    return picked.map((p) => ({ weaponId: p.id, kind: p.kind }));
+    return picked;
   }
 
   show(choices: UpgradeChoice[]): void {
@@ -141,11 +150,8 @@ export class LevelUpOverlay {
 
       c.choice = choice;
 
-      const meta = weaponMeta[choice.weaponId];
-      const kindText = choice.kind === 'new' ? '学习' : '强化';
-
-      c.label.text = `${i + 1}. ${kindText}：${meta.name}`;
-      c.desc.text = meta.desc;
+      c.label.text = `${i + 1}. ${choice.title}`;
+      c.desc.text = choice.desc;
     }
   }
 
