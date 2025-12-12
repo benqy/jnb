@@ -1,5 +1,7 @@
 # JNB Survivor (PixiJS + Vite + TypeScript)
 
+体验地址: https://benqy.github.io/jnb/
+
 ## 开发
 
 ```powershell

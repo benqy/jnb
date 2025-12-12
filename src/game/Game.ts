@@ -223,13 +223,13 @@ export class Game {
   }
 
   private async loadAssets(): Promise<void> {
-    this.heroTex = await Assets.load('/images/hero.png');
-    this.shadowTex = await Assets.load('/images/Char_shadow.png');
-    this.tileTex = await Assets.load('/images/tile.png');
+    this.heroTex = await Assets.load('/jnb/images/hero.png');
+    this.shadowTex = await Assets.load('/jnb/images/Char_shadow.png');
+    this.tileTex = await Assets.load('/jnb/images/tile.png');
     // allow repeating
     this.tileTex.source.wrapMode = 'repeat';
 
-    const monsterPaths = Array.from({ length: 24 }, (_, i) => `/images/monster/monster-${i}.png`);
+    const monsterPaths = Array.from({ length: 24 }, (_, i) => `/jnb/images/monster/monster-${i}.png`);
     const textures = await Promise.all(monsterPaths.map((p) => Assets.load(p)));
     this.monsterTex = textures;
   }
