@@ -57,14 +57,14 @@ export class LevelUpOverlay {
       desc.alpha = 0.9;
 
       root.addChild(bg, label, desc);
-      // root.on('pointerdown', () => {
-      //   const c = this.cards[i].choice;
-      //   if (!c) {
-      //     if (this.gameOverMode && this.onRestart) this.onRestart();
-      //     return;
-      //   }
-      //   opts.onPick(c);
-      // });
+      root.on('pointerdown', () => {
+        const c = this.cards[i].choice;
+        if (!c) {
+          if (this.gameOverMode && this.onRestart) this.onRestart();
+          return;
+        }
+        opts.onPick(c);
+      });
 
       this.cards.push({ root, bg, label, desc });
       this.container.addChild(root);

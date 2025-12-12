@@ -36,9 +36,14 @@ export class HUD {
 
   private barW = 360;
   private rightW = 420;
+  private rightH = 98;
   private barX = 28;
   private hpY = 26;
   private xpY = 46;
+
+  getRightPanelSize(): { width: number; height: number } {
+    return { width: this.rightW, height: this.rightH };
+  }
 
   constructor() {
     this.container.addChild(this.leftPanel);
@@ -77,7 +82,7 @@ export class HUD {
 
     const rightX = w - 12 - this.rightW;
     const rightY = 10;
-    const rightH = 74;
+    this.rightH = 98;
 
     this.leftPanel.clear();
     this.leftPanel.roundRect(leftX, leftY, this.barW + 32, leftH, 16);
@@ -85,7 +90,7 @@ export class HUD {
     this.leftPanel.stroke({ width: 2, color: 0x28406b, alpha: 0.65 });
 
     this.rightPanel.clear();
-    this.rightPanel.roundRect(rightX, rightY, this.rightW, rightH, 16);
+    this.rightPanel.roundRect(rightX, rightY, this.rightW, this.rightH, 16);
     this.rightPanel.fill({ color: 0x070b18, alpha: 0.7 });
     this.rightPanel.stroke({ width: 2, color: 0x28406b, alpha: 0.65 });
 

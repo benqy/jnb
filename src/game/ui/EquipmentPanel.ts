@@ -24,13 +24,13 @@ export class EquipmentPanel {
   private readonly confirmDim = new Graphics();
   private readonly confirmBox = new Graphics();
   private readonly confirmText = new Text({
-    text: '丢弃该装备？',
-    style: { fill: 0xe7efff, fontSize: 14, lineHeight: 18 },
+    text: '装备',
+    style: { fill: 0xe7efff, fontSize: 14, lineHeight: 18, wordWrap: true, wordWrapWidth: 220 },
   });
   private readonly btnYes = new Graphics();
   private readonly btnNo = new Graphics();
   private readonly btnYesText = new Text({ text: '丢弃', style: { fill: 0xe7efff, fontSize: 13 } });
-  private readonly btnNoText = new Text({ text: '取消', style: { fill: 0xe7efff, fontSize: 13 } });
+  private readonly btnNoText = new Text({ text: '关闭', style: { fill: 0xe7efff, fontSize: 13 } });
 
   private pendingSlot: number | null = null;
   private onDiscard?: (slotIndex: number) => void;
@@ -148,7 +148,7 @@ export class EquipmentPanel {
     this.confirmDim.fill({ color: 0x000000, alpha: 0.45 });
 
     const bw = Math.min(260, panelW - 24);
-    const bh = 140;
+    const bh = 172;
     const bx = this.x + (panelW - bw) / 2;
     const by = this.y + (panelH - bh) / 2;
 
@@ -159,6 +159,7 @@ export class EquipmentPanel {
 
     this.confirmText.x = bx + 16;
     this.confirmText.y = by + 16;
+    this.confirmText.style.wordWrapWidth = bw - 32;
 
     const btnW = (bw - 16 * 2 - 10) / 2;
     const btnH = 38;
@@ -178,9 +179,9 @@ export class EquipmentPanel {
     this.btnNoText.anchor.set(0.5);
 
     this.btnYesText.x = bx + 16 + btnW / 2;
-    this.btnYesText.y = btnY + 9;
+    this.btnYesText.y = btnY + btnH / 2;
     this.btnNoText.x = bx + 16 + btnW + 10 + btnW / 2;
-    this.btnNoText.y = btnY + 9;
+    this.btnNoText.y = btnY + btnH / 2;
   }
 
   update(slots: ReadonlyArray<EquipmentItem | null>): void {

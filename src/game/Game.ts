@@ -255,11 +255,10 @@ export class Game {
 
   private layoutEquipment(): void {
     const w = this.app.screen.width;
-    const rightW = (this.hud as unknown as { rightW?: number }).rightW;
-    const panelW = typeof rightW === 'number' ? rightW : Math.max(280, Math.min(520, w * 0.36));
+    const { width: panelW, height: rightH } = this.hud.getRightPanelSize();
 
     const x = w - 12 - panelW;
-    const y = 10 + 74 + 10;
+    const y = 10 + rightH + 10;
 
     this.equipmentPanel.layout(this.app.screen.width, this.app.screen.height, { x, y, width: panelW });
   }
@@ -308,7 +307,7 @@ export class Game {
 
   private updatePlayer(dt: number): void {
     const move = this.input.getMoveAxis();
-    this.player.update(dt, move, this.elapsed);
+    this.player.update(dt, move);
 
     // Weapons
     const weapons = this.player.weapons;

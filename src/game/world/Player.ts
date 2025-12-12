@@ -44,8 +44,6 @@ export class Player {
   private lastContactHitAt = -999;
   private contactIFrames = 0.7;
 
-  private outOfCombatRegenDelay = 2.0;
-
   private hurtFlash = 0;
 
   weapons: Weapon[] = [];
@@ -91,7 +89,7 @@ export class Player {
     this.recomputeStats();
   }
 
-  update(dt: number, axis: { x: number; y: number }, now: number): void {
+  update(dt: number, axis: { x: number; y: number }): void {
     if (this.dead) return;
 
     this.t += dt;
@@ -118,8 +116,8 @@ export class Player {
     // tiny tilt feels like "步伐" 而不是海浪
     this.sprite.rotation = moving ? axis.x * 0.06 : Math.sin(this.t * 2) * 0.015;
 
-    // conservative regen: only out of combat
-    if (this.hp < this.maxHp && this.hpRegen > 0 && now - this.lastContactHitAt >= this.outOfCombatRegenDelay) {
+    // conservative regen: always on (no out-of-combat requirement)
+    if (this.hp < this.maxHp && this.hpRegen > 0) {
       this.hp = clamp(this.hp + this.hpRegen * dt, 0, this.maxHp);
     }
 

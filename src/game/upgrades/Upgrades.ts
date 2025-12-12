@@ -72,7 +72,7 @@ const statDefs: Record<
   hpRegen: {
     name: '生命恢复',
     maxLevel: 8,
-    desc: () => '脱战后生命恢复 +0.20/秒。',
+    desc: () => '生命恢复 +0.20/秒。',
     apply: (p) => {
       p.addBase('hpRegen', 0.2);
     },
