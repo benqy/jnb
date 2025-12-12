@@ -1,0 +1,63 @@
+name: Build and deploy to gh-pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-build"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (ci if lockfile exists, otherwise install)
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "package-lock.json found — using npm ci"
+            npm ci
+          else
+            echo "No package-lock.json — using npm install"
+            npm install
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Find build output directory
+        id: find_build
+        run: |
+          if [ -d "dist" ]; then echo "publish_dir=dist" >> $GITHUB_OUTPUT
+          elif [ -d "build" ]; then echo "publish_dir=build" >> $GITHUB_OUTPUT
+          elif [ -d "public" ]; then echo "publish_dir=public" >> $GITHUB_OUTPUT
+          else
+            echo "No build directory found (checked: dist, build, public)"
+            ls -la
+            exit 1
+          fi
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ steps.find_build.outputs.publish_dir }}
+          publish_branch: gh-pages
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          keep_files: false
