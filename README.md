@@ -1,36 +1,39 @@
-# JNB Survivor (PixiJS + Vite + TypeScript)
+# JNB — AI Survivor
 
-体验地址: https://benqy.github.io/jnb/
+本项目是一次实验性尝试：测试由 AI 全面设计与实现的游戏能达到什么程度。
 
-## 开发
+快速上手
 
 ```powershell
 pnpm install
 pnpm dev
 ```
 
-打开提示的本地地址（默认 `http://localhost:2334`）。
+打开本地地址（默认 http://localhost:2334）。
 
-## 操作
+如何游玩
+- WASD：移动
+- 升级弹出时：按 `1`/`2`/`3` 选择
+- `Esc`：暂停（可重开）
 
-- `W/A/S/D`：移动
-- 升级时：按 `1/2/3` 或点击卡牌选择
-
-## 构建
+构建
 
 ```powershell
 pnpm build
 pnpm preview
 ```
 
-## 部署与资源路径
+资源与目录
+- 运行时静态资源位于 `public/`。
+- 贴图（英雄、怪物、装备）位于 `public/images`，装备素材在 `public/images/equipment` 按稀有度分目录。
 
-静态资源放在 `public/`，运行时前缀由 `src/config.ts` 的 `PROJECT_ROOT` 提供（默认取 Vite 的 `base`）。
+文档
+- 游戏设计（概要）: `docs/game-design.md`
+- 架构说明（概要）: `docs/architecture.md`
 
-示例：
-```ts
-import { PROJECT_ROOT } from './config';
-await Assets.load(`${PROJECT_ROOT}images/hero.png`);
-```
+目的说明
+- 我们的唯一目标是评估 AI 在完整游戏设计与实现中的能力和产出；本仓库用于该实验性评估，不代表任何商业产品承诺。
 
-Fork 时只需设置自己的 `vite.config.ts` `base`，或修改 `src/config.ts`。
+贡献
+- 若要贡献，请参考 `docs/architecture.md` 中的模块说明提交改进建议或 PR。
+
