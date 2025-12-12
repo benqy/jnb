@@ -285,7 +285,7 @@ export class Game {
             color: 0xff5263,
             size: 22,
           });
-          this.particles.hitSpark({ pos: this.player.pos, color: 0xff5263, strength: 0.8 });
+          // this.particles.hitSpark({ pos: this.player.pos, color: 0xff5263, strength: 0.8 });
         }
       }
     }
