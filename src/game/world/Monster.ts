@@ -40,7 +40,7 @@ export class Monster {
     this.shadow = new Sprite(opts.shadowTexture);
     this.shadow.anchor.set(0.5);
     this.shadow.x = 0;
-    this.shadow.y = 50;
+    this.shadow.y = 95;
     this.shadow.alpha = 0.5;
 
     this.sprite = new Sprite(opts.texture);

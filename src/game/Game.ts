@@ -4,6 +4,7 @@ import {
   Container,
   Graphics,
   Texture,
+  TilingSprite,
 } from 'pixi.js';
 import { Input } from './input/Input';
 import { Vec2 } from './math/Vec2';
@@ -32,6 +33,10 @@ export class Game {
   private readonly ui = new Container();
 
   private readonly bgGrid = new Graphics();
+
+  private tileTex!: Texture;
+  private tileFloor?: TilingSprite;
+  private tilePad = 220;
 
   private heroTex!: Texture;
   private shadowTex!: Texture;
@@ -165,6 +170,9 @@ export class Game {
   private async loadAssets(): Promise<void> {
     this.heroTex = await Assets.load('/images/hero.png');
     this.shadowTex = await Assets.load('/images/Char_shadow.png');
+    this.tileTex = await Assets.load('/images/tile.png');
+    // allow repeating
+    this.tileTex.source.wrapMode = 'repeat';
 
     const monsterPaths = Array.from({ length: 24 }, (_, i) => `/images/monster/monster-${i}.png`);
     const textures = await Promise.all(monsterPaths.map((p) => Assets.load(p)));
@@ -175,32 +183,38 @@ export class Game {
     const w = this.app.screen.width;
     const h = this.app.screen.height;
 
+    // Replace old grid with tiled floor
     this.bgGrid.clear();
+    this.bgGrid.visible = false;
 
-    // Subtle grid to help motion perception
-    const size = 128;
-    const halfW = w / 2;
-    const halfH = h / 2;
-
-    this.bgGrid.rect(-halfW - size, -halfH - size, w + size * 2, h + size * 2);
-    this.bgGrid.fill({ color: 0x050612 });
-
-    for (let x = -halfW - size; x <= halfW + size; x += size) {
-      this.bgGrid.moveTo(x, -halfH - size);
-      this.bgGrid.lineTo(x, halfH + size);
+    const pad = this.tilePad;
+    if (!this.tileFloor) {
+      this.tileFloor = new TilingSprite({
+        texture: this.tileTex,
+        width: w + pad * 2,
+        height: h + pad * 2,
+      });
+      this.tileFloor.alpha = 0.95;
+      this.worldBg.addChildAt(this.tileFloor, 0);
+    } else {
+      this.tileFloor.width = w + pad * 2;
+      this.tileFloor.height = h + pad * 2;
     }
-    for (let y = -halfH - size; y <= halfH + size; y += size) {
-      this.bgGrid.moveTo(-halfW - size, y);
-      this.bgGrid.lineTo(halfW + size, y);
-    }
-
-    this.bgGrid.stroke({ width: 1, color: 0x0b1632, alpha: 0.25 });
   }
 
   private updateCamera(): void {
     const center = this.app.screen;
     this.world.x = center.width / 2 - this.player.pos.x;
     this.world.y = center.height / 2 - this.player.pos.y;
+
+    // Keep floor covering the view, but scroll tiles with world coords
+    if (this.tileFloor) {
+      const pad = this.tilePad;
+      this.tileFloor.x = this.player.pos.x - center.width / 2 - pad;
+      this.tileFloor.y = this.player.pos.y - center.height / 2 - pad;
+      this.tileFloor.tilePosition.x = -this.player.pos.x;
+      this.tileFloor.tilePosition.y = -this.player.pos.y;
+    }
 
     // keep UI pinned
     this.ui.x = 0;
@@ -285,7 +299,7 @@ export class Game {
             color: 0xff5263,
             size: 22,
           });
-          // this.particles.hitSpark({ pos: this.player.pos, color: 0xff5263, strength: 0.8 });
+          this.particles.hitSpark({ pos: this.player.pos, color: 0xff5263, strength: 0.8 });
         }
       }
     }

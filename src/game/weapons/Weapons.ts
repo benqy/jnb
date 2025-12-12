@@ -366,11 +366,22 @@ export const weaponFactories: Record<WeaponId, () => Weapon> = {
             color: 0x7ad1ff,
             knockbackDir: dir,
             knockback: 420,
+            shape: 'shard',
+            spin: 0,
           });
           ctx.spawnProjectile(p);
         }
 
-        ctx.fx.hitSpark({ pos: ctx.player.pos.add(base.mul(44)), color: 0x7ad1ff, strength: 1.0 });
+        // icy muzzle burst
+        ctx.fx.hitSpark({ pos: ctx.player.pos.add(base.mul(44)), color: 0x7ad1ff, strength: 1.25 });
+        ctx.fx.burstText({
+          pos: ctx.player.pos.add(base.mul(44)),
+          text: '❄',
+          color: 0xbfe8ff,
+          count: 3,
+          speed: 80,
+          life: 0.22,
+        });
       },
     };
 
