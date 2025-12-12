@@ -56,7 +56,7 @@ export class EquipmentPanel {
       icon.anchor.set(0.5);
       icon.x = 22;
       icon.y = 22;
-      icon.scale.set(0.52);
+      icon.scale.set(0.42);
       icon.visible = false;
 
       root.addChild(bg, icon);

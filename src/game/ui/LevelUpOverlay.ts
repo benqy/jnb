@@ -9,7 +9,7 @@ export class LevelUpOverlay {
   private readonly dim = new Graphics();
   private readonly panel = new Graphics();
   private readonly title = new Text({
-    text: '升级！选择 1/2/3',
+    text: '升级！按数字选择 1/2/3',
     style: { fill: 0xe7efff, fontSize: 22 },
   });
 
@@ -57,14 +57,14 @@ export class LevelUpOverlay {
       desc.alpha = 0.9;
 
       root.addChild(bg, label, desc);
-      root.on('pointerdown', () => {
-        const c = this.cards[i].choice;
-        if (!c) {
-          if (this.gameOverMode && this.onRestart) this.onRestart();
-          return;
-        }
-        opts.onPick(c);
-      });
+      // root.on('pointerdown', () => {
+      //   const c = this.cards[i].choice;
+      //   if (!c) {
+      //     if (this.gameOverMode && this.onRestart) this.onRestart();
+      //     return;
+      //   }
+      //   opts.onPick(c);
+      // });
 
       this.cards.push({ root, bg, label, desc });
       this.container.addChild(root);
