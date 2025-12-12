@@ -138,6 +138,13 @@ export class HUD {
       .map((w) => `${w.name} Lv${w.level}`)
       .join(' | ');
 
-    this.rightText.text = `Lv ${player.level}   Kills ${player.kills}   Time ${time}\n${weaponText}`;
+    const regen = player.hpRegen > 0 ? `${player.hpRegen.toFixed(2)}/s` : '0';
+    const dr = Math.round(player.getDamageReduction() * 100);
+    const luck = player.luck.toFixed(1);
+
+    this.rightText.text =
+      `Lv ${player.level}   Kills ${player.kills}   Time ${time}` +
+      `\n${weaponText}` +
+      `\nRegen ${regen}   Armor ${dr}%   Luck ${luck}`;
   }
 }

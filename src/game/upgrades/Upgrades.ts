@@ -2,7 +2,16 @@ import { clamp } from '../math/util';
 import { Player } from '../world/Player';
 import { WeaponId, weaponMeta } from '../weapons/Weapons';
 
-export type StatId = 'maxHp' | 'pickupRadius' | 'moveSpeed' | 'damage' | 'cooldown' | 'area';
+export type StatId =
+  | 'maxHp'
+  | 'pickupRadius'
+  | 'moveSpeed'
+  | 'hpRegen'
+  | 'armor'
+  | 'luck'
+  | 'damage'
+  | 'cooldown'
+  | 'area';
 export type FusionId = 'stormcaller' | 'astralBlades' | 'glacialSingularity';
 
 export type UpgradeChoice =
@@ -40,7 +49,7 @@ const statDefs: Record<
     maxLevel: 10,
     desc: () => '最大生命 +18，并立刻回复 18。',
     apply: (p) => {
-      p.maxHp += 18;
+      p.addBase('maxHp', 18);
       p.hp = clamp(p.hp + 18, 0, p.maxHp);
     },
   },
@@ -49,7 +58,7 @@ const statDefs: Record<
     maxLevel: 10,
     desc: () => '拾取范围 +18。',
     apply: (p) => {
-      p.pickupRadius += 18;
+      p.addBase('pickupRadius', 18);
     },
   },
   moveSpeed: {
@@ -57,7 +66,31 @@ const statDefs: Record<
     maxLevel: 8,
     desc: () => '移速 +24。',
     apply: (p) => {
-      p.moveSpeed += 24;
+      p.addBase('moveSpeed', 24);
+    },
+  },
+  hpRegen: {
+    name: '生命恢复',
+    maxLevel: 8,
+    desc: () => '脱战后生命恢复 +0.20/秒。',
+    apply: (p) => {
+      p.addBase('hpRegen', 0.2);
+    },
+  },
+  armor: {
+    name: '护甲',
+    maxLevel: 8,
+    desc: () => '减少受到的伤害（每点约 3%，上限 45%）。',
+    apply: (p) => {
+      p.addBase('armor', 0.8);
+    },
+  },
+  luck: {
+    name: '幸运',
+    maxLevel: 8,
+    desc: () => '更容易掉落高稀有装备。',
+    apply: (p) => {
+      p.addBase('luck', 0.8);
     },
   },
   damage: {
@@ -65,7 +98,7 @@ const statDefs: Record<
     maxLevel: 10,
     desc: () => '所有法术伤害 +10%。',
     apply: (p) => {
-      p.damageMult *= 1.1;
+      p.mulBase('damageMult', 1.1);
     },
   },
   cooldown: {
@@ -73,7 +106,7 @@ const statDefs: Record<
     maxLevel: 10,
     desc: () => '所有法术冷却 -8%。',
     apply: (p) => {
-      p.cooldownMult *= 0.92;
+      p.mulBase('cooldownMult', 0.92);
     },
   },
   area: {
@@ -81,7 +114,7 @@ const statDefs: Record<
     maxLevel: 8,
     desc: () => '范围与射程 +10%。',
     apply: (p) => {
-      p.areaMult *= 1.1;
+      p.mulBase('areaMult', 1.1);
     },
   },
 };
@@ -155,7 +188,17 @@ export function getUpgradePool(player: Player): UpgradeChoice[] {
   }
 
   // stats
-  const stats: StatId[] = ['maxHp', 'pickupRadius', 'moveSpeed', 'damage', 'cooldown', 'area'];
+  const stats: StatId[] = [
+    'maxHp',
+    'hpRegen',
+    'armor',
+    'pickupRadius',
+    'moveSpeed',
+    'luck',
+    'damage',
+    'cooldown',
+    'area',
+  ];
   for (const statId of stats) {
     if (!canUpgradeStat(player, statId)) continue;
     const nextLevel = getStatLevel(player, statId) + 1;

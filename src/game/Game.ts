@@ -21,6 +21,8 @@ import { HintToast } from './ui/HintToast';
 import { CornerHelp } from './ui/CornerHelp';
 import { TitleOverlay } from './ui/TitleOverlay';
 import { PauseOverlay } from './ui/PauseOverlay';
+import { EquipmentPanel } from './ui/EquipmentPanel';
+import { EquipmentTextures, loadEquipmentTextures, rollEquipment } from './equipment';
 import { applyUpgradeChoice, getUpgradePool, type UpgradeChoice } from './upgrades/Upgrades';
 
 export class Game {
@@ -43,6 +45,7 @@ export class Game {
   private heroTex!: Texture;
   private shadowTex!: Texture;
   private monsterTex: Texture[] = [];
+  private equipmentTex!: EquipmentTextures;
 
   private player!: Player;
   private monsters: Monster[] = [];
@@ -55,6 +58,7 @@ export class Game {
   private readonly levelUpOverlay: LevelUpOverlay;
   private readonly hintToast: HintToast;
   private readonly cornerHelp: CornerHelp;
+  private readonly equipmentPanel: EquipmentPanel;
 
   private elapsed = 0;
   private spawnTimer = 0;
@@ -77,10 +81,18 @@ export class Game {
       onPick: (choice: UpgradeChoice) => this.applyUpgrade(choice),
     });
     this.hintToast = new HintToast();
-    this.cornerHelp = new CornerHelp('WASD 移动\n升级：1/2/3\n融合：两技能≥Lv3');
+    this.cornerHelp = new CornerHelp('WASD 移动\n升级：1/2/3\n融合：两技能≥Lv3\n装备：拾取自动装备（有空位）');
 
     this.titleOverlay = new TitleOverlay();
     this.pauseOverlay = new PauseOverlay();
+
+    this.equipmentPanel = new EquipmentPanel({
+      slotCount: 8,
+      onDiscard: (slotIndex) => {
+        const it = this.player.discardEquipment(slotIndex);
+        if (it) this.hintToast.show(`已丢弃：${it.name}`);
+      },
+    });
   }
 
   async init(): Promise<void> {
@@ -100,6 +112,7 @@ export class Game {
     this.ui.addChild(this.cornerHelp.container);
     this.ui.addChild(this.titleOverlay.container);
     this.ui.addChild(this.pauseOverlay.container);
+    this.ui.addChild(this.equipmentPanel.container);
 
     await this.loadAssets();
     this.buildBackground();
@@ -129,6 +142,7 @@ export class Game {
       this.cornerHelp.layout(this.app.screen.width, this.app.screen.height);
       this.titleOverlay.layout(this.app.screen.width, this.app.screen.height);
       this.pauseOverlay.layout(this.app.screen.width, this.app.screen.height);
+      this.layoutEquipment();
     });
 
     this.levelUpOverlay.layout(this.app.screen.width, this.app.screen.height);
@@ -138,6 +152,8 @@ export class Game {
 
     this.titleOverlay.layout(this.app.screen.width, this.app.screen.height);
     this.pauseOverlay.layout(this.app.screen.width, this.app.screen.height);
+
+    this.layoutEquipment();
 
     this.titleOverlay.show({ bestTime: this.getBestTime() });
     this.pauseOverlay.hide();
@@ -233,6 +249,19 @@ export class Game {
     const monsterPaths = Array.from({ length: 24 }, (_, i) => `${PROJECT_ROOT}images/monster/monster-${i}.png`);
     const textures = await Promise.all(monsterPaths.map((p) => Assets.load(p)));
     this.monsterTex = textures;
+
+    this.equipmentTex = await loadEquipmentTextures();
+  }
+
+  private layoutEquipment(): void {
+    const w = this.app.screen.width;
+    const rightW = (this.hud as unknown as { rightW?: number }).rightW;
+    const panelW = typeof rightW === 'number' ? rightW : Math.max(280, Math.min(520, w * 0.36));
+
+    const x = w - 12 - panelW;
+    const y = 10 + 74 + 10;
+
+    this.equipmentPanel.layout(this.app.screen.width, this.app.screen.height, { x, y, width: panelW });
   }
 
   private buildBackground(): void {
@@ -279,7 +308,7 @@ export class Game {
 
   private updatePlayer(dt: number): void {
     const move = this.input.getMoveAxis();
-    this.player.update(dt, move);
+    this.player.update(dt, move, this.elapsed);
 
     // Weapons
     const weapons = this.player.weapons;
@@ -294,6 +323,9 @@ export class Game {
         fx: this.particles,
       });
     }
+
+    this.equipmentPanel.onPeek = (idx) => this.player.getEquipmentSlots()[idx] ?? null;
+    this.equipmentPanel.update(this.player.getEquipmentSlots());
   }
 
   private updateSpawning(dt: number): void {
@@ -415,8 +447,16 @@ export class Game {
       if (x.dead) continue;
       const dist = x.pos.sub(this.player.pos).len();
       if (dist < x.radius + this.player.pickupRadius) {
-        x.collect(this.player);
-        x.dead = true;
+        const ok = x.collect(this.player);
+        if (ok) {
+          if (x.isEquipment()) {
+            const it = x.getItem();
+            if (it) this.hintToast.show(`已装备：${it.name}`);
+          }
+          x.dead = true;
+        } else {
+          if (x.isEquipment()) this.hintToast.show('装备栏已满：点击装备格子丢弃');
+        }
       }
     }
   }
@@ -439,6 +479,19 @@ export class Game {
       });
       this.pickups.push(xp);
       this.worldEntities.addChild(xp.display);
+
+      // equipment drop
+      const base = clamp(0.08 + this.spawnIntensity * 0.006, 0.08, 0.18);
+      const chance = clamp(base * (1 + this.player.luck * 0.08), 0, 0.3);
+      if (Math.random() < chance) {
+        const it = rollEquipment({ luck: this.player.luck, textures: this.equipmentTex });
+        const eq = Pickup.makeEquipment({
+          pos: m.pos.add(new Vec2(randRange(-14, 14), randRange(-14, 14))),
+          item: it,
+        });
+        this.pickups.push(eq);
+        this.worldEntities.addChild(eq.display);
+      }
 
       this.particles.burstText({
         pos: m.pos,
