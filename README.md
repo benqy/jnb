@@ -7,7 +7,7 @@ pnpm install
 pnpm dev
 ```
 
-打开提示的本地地址（默认 `http://localhost:5173`）。
+打开提示的本地地址（默认 `http://localhost:2334`）。
 
 ## 操作
 
